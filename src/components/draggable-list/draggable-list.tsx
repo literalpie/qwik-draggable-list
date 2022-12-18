@@ -1,9 +1,9 @@
 import {
   $,
-  Component,
   component$,
   createContext,
   Signal,
+  Slot,
   useClientEffect$,
   useContext,
   useContextProvider,
@@ -11,6 +11,8 @@ import {
   useSignal,
   useStore,
   useStylesScoped$,
+  Context,
+  QRL,
   useWatch$,
 } from "@builder.io/qwik";
 import styles from "./draggable-list.css?inline";
@@ -18,6 +20,15 @@ type DraggingState<T> = {
   allItems: Signal<T[]>;
   draggingItem?: T;
   draggedOverItem?: T;
+  onDrop$: QRL<
+    ({
+      droppedItem,
+      itemDroppedOn,
+    }: {
+      droppedItem: T;
+      itemDroppedOn: T;
+    }) => void
+  >;
 };
 export const draggingContext =
   createContext<DraggingState<unknown>>("dragging-context");
@@ -29,74 +40,59 @@ export const DraggableListUser = component$(() => {
   return (
     <DraggableList
       list={allItems}
-      listItemRenderer={component$(({ listItem, ref }) => {
-        useStylesScoped$(styles);
-        // scopeId needed so that styles scoped to this component will be applied to classes added to this element
-        return <div ref={ref}>{listItem}</div>;
+      onDrop$={({ droppedItem, itemDroppedOn }) => {
+        const droppedIndex = allItems.value.indexOf(itemDroppedOn!);
+        const newAllItems = allItems.value.filter(
+          (item) => item !== droppedItem
+        );
+        newAllItems.splice(droppedIndex, 0, droppedItem!);
+        allItems.value = newAllItems;
+      }}
+    >
+      {allItems.value.map((listItem) => {
+        return (
+          <DraggableListItem key={listItem} listItem={listItem}>
+            {listItem}
+          </DraggableListItem>
+        );
       })}
-    />
+    </DraggableList>
   );
 });
-
 type DraggableListProps<T = unknown> = {
   list: Signal<T[]>;
-  listItemRenderer: Component<{
-    ref: Signal<HTMLElement | undefined>;
-    listItem: T;
-  }>;
+  onDrop$: QRL<
+    ({
+      droppedItem,
+      itemDroppedOn,
+    }: {
+      droppedItem: T;
+      itemDroppedOn: T;
+    }) => void
+  >;
 };
 
 export const DraggableList = component$(
-  <T,>({ list, listItemRenderer }: DraggableListProps<T>) => {
+  <T,>({ list, onDrop$ }: DraggableListProps<T>) => {
     const draggingState = useStore<DraggingState<T>>({
       allItems: list,
+      onDrop$,
     });
-    useContextProvider(draggingContext, draggingState);
-
-    return (
-      <div
-        onDrop$={() => {
-          const droppedIndex = draggingState.allItems.value.indexOf(
-            draggingState.draggedOverItem!
-          );
-          const newAllItems = draggingState.allItems.value.filter(
-            (item) => item !== draggingState.draggingItem
-          );
-          newAllItems.splice(droppedIndex, 0, draggingState.draggingItem!);
-          draggingState.allItems.value = newAllItems;
-          draggingState.draggedOverItem = undefined;
-        }}
-      >
-        {list.value.map((listItem) => {
-          return (
-            <DraggableListItem
-              key={listItem as string}
-              listItem={listItem as any}
-              listItemRenderer={listItemRenderer}
-            />
-          );
-        })}
-      </div>
+    useContextProvider<DraggingState<T>>(
+      draggingContext as Context<DraggingState<T>>,
+      draggingState
     );
+
+    return <Slot />;
   }
 );
 export const DraggableListItem = component$(
-  <T,>({
-    listItem,
-    listItemRenderer: ListItemRenderer,
-  }: {
-    listItem: T;
-    listItemRenderer: Component<{
-      ref: Signal<HTMLElement | undefined>;
-      listItem: T;
-    }>;
-  }) => {
+  <T,>({ listItem }: { listItem: T }) => {
+    useStylesScoped$(styles);
     const { ref } = useDragItem({ item: listItem });
     return (
-      // It's kind of a bummer that we need to add a div, but we need to so that the events can be listened to on it.
-      <div>
-        {/* I don't know why listItem type doesn't match. */}
-        <ListItemRenderer ref={ref} listItem={listItem as any} />
+      <div ref={ref}>
+        <Slot />
       </div>
     );
   }
@@ -105,6 +101,8 @@ export const DraggableListItem = component$(
 export const useDragItem = <T,>({ item }: { item: T }) => {
   const ref = useSignal<HTMLElement>();
   const draggingState = useContext<DraggingState<T>>(draggingContext as any);
+  // Yes, it would be cleaner if we listened to these events normally inside DraggableListItem
+  // but having it in a hook like this might be useful if someone wants total control (making their own component that uses this hook)
   useOn(
     "dragstart",
     $(() => (draggingState.draggingItem = item))
@@ -125,11 +123,20 @@ export const useDragItem = <T,>({ item }: { item: T }) => {
         : void 0
     )
   );
+  useOn(
+    "drop",
+    $(() => {
+      draggingState.onDrop$({
+        droppedItem: draggingState.draggingItem!,
+        itemDroppedOn: draggingState.draggedOverItem!,
+      });
+      draggingState.draggingItem = undefined;
+      draggingState.draggedOverItem = undefined;
+    })
+  );
 
   useClientEffect$(({ track }) => {
     track(() => ref.value);
-    console.log("client");
-    console.log("ref value changes", item);
     ref.value ? (ref.value.draggable = true) : void 0;
     ref.value?.addEventListener("dragover", (e) => {
       e.preventDefault();
