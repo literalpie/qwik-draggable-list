@@ -16,6 +16,8 @@ import {
   useWatch$,
 } from "@builder.io/qwik";
 import styles from "./draggable-list.css?inline";
+
+// This file aims to behave as a reusable component (and draggable-list-consumer is how a consuming app would use it)
 type DraggingState<T> = {
   allItems: Signal<T[]>;
   draggingItem?: T;
@@ -33,32 +35,6 @@ type DraggingState<T> = {
 export const draggingContext =
   createContext<DraggingState<unknown>>("dragging-context");
 
-export const DraggableListUser = component$(() => {
-  useStylesScoped$(styles);
-  const allItems = useSignal(["test 1", "test 2 ", "test 3"]);
-
-  return (
-    <DraggableList
-      list={allItems}
-      onDrop$={({ droppedItem, itemDroppedOn }) => {
-        const droppedIndex = allItems.value.indexOf(itemDroppedOn!);
-        const newAllItems = allItems.value.filter(
-          (item) => item !== droppedItem
-        );
-        newAllItems.splice(droppedIndex, 0, droppedItem!);
-        allItems.value = newAllItems;
-      }}
-    >
-      {allItems.value.map((listItem) => {
-        return (
-          <DraggableListItem key={listItem} listItem={listItem}>
-            {listItem}
-          </DraggableListItem>
-        );
-      })}
-    </DraggableList>
-  );
-});
 type DraggableListProps<T = unknown> = {
   list: Signal<T[]>;
   onDrop$: QRL<
@@ -75,6 +51,8 @@ type DraggableListProps<T = unknown> = {
 export const DraggableList = component$(
   <T,>({ list, onDrop$ }: DraggableListProps<T>) => {
     const draggingState = useStore<DraggingState<T>>({
+      // Ideally, we wouldn't need the whole list, but I can't think of a better way of showing the correct before/after class
+      // and I don't want to make the user do that calculation.
       allItems: list,
       onDrop$,
     });
@@ -143,11 +121,13 @@ export const useDragItem = <T,>({ item }: { item: T }) => {
     });
   });
 
+  // Currently, the classes that get added for the different states are just hard-coded.
+  // I think this is probably the best way, and it would just be up to the consumer
+  // to add the styles they want to these classes.
   useWatch$(({ track }) => {
     track(() => draggingState.draggedOverItem);
     track(() => draggingState.draggingItem);
     track(() => draggingState.allItems);
-    // console.log("state", draggingState.draggingItem);
     const possibleClasses = [
       "dragging",
       "dragging-over__after",

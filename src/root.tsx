@@ -1,5 +1,5 @@
 import { Counter } from "./components/counter/counter";
-import { DraggableListUser } from "./components/draggable-list/draggable-list";
+import { DraggableListConsumer } from "./components/draggable-list-consumer/draggable-list-consumer";
 import { Logo } from "./components/logo/logo";
 
 export default () => {
@@ -12,7 +12,7 @@ export default () => {
       <body>
         <Logo />
         <Counter />
-        <DraggableListUser />
+        <DraggableListConsumer />
       </body>
     </>
   );
