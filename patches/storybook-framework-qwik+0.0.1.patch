@@ -1,0 +1,42 @@
+diff --git a/node_modules/storybook-framework-qwik/dist/preset.js b/node_modules/storybook-framework-qwik/dist/preset.js
+index 70ea777..4a65e2c 100644
+--- a/node_modules/storybook-framework-qwik/dist/preset.js
++++ b/node_modules/storybook-framework-qwik/dist/preset.js
+@@ -4,18 +4,6 @@ export const core = {
+     builder: '@storybook/builder-vite',
+     renderer: '@storybook/html',
+ };
+-export const viteFinal = async (defaultConfig, options) => {
+-    console.log('VITE THING');
+-    const config = mergeConfig(defaultConfig, {
+-        build: {
+-            target: 'es2020',
+-            rollupOptions: {
+-                external: ['@qwik-city-sw-register', '@qwik-city-plan'],
+-            },
+-        },
+-    });
+-    return config;
+-};
+ export const previewAnnotations = (entry = []) => [
+     ...entry,
+     require.resolve('storybook-framework-qwik/preview.js'),
+diff --git a/node_modules/storybook-framework-qwik/dist/preview.js b/node_modules/storybook-framework-qwik/dist/preview.js
+index 9d76518..249c1f2 100644
+--- a/node_modules/storybook-framework-qwik/dist/preview.js
++++ b/node_modules/storybook-framework-qwik/dist/preview.js
+@@ -1,12 +1,11 @@
+ import { render } from '@builder.io/qwik';
+-import { QwikCityMockProvider } from '@builder.io/qwik-city';
+ import { jsx as _jsx } from '@builder.io/qwik/jsx-runtime';
+ const qwikCityDecorator = (Story) => {
+     const parent = document.createElement('div');
+     const jsxNode = Story();
+-    const tree = _jsx(QwikCityMockProvider, {
++    const tree = _jsx('div', {
+         children: jsxNode,
+-    }, 'QwikCityMockProvider');
++    }, 'qwik');
+     render(parent, tree);
+     return parent;
+ };

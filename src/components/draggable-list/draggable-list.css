@@ -1,0 +1,9 @@
+.dragging {
+  background-color: lightblue;
+}
+.dragging-over__after {
+  border-bottom: solid 1px black;
+}
+.dragging-over__before {
+  border-top: solid 1px black;
+}

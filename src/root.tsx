@@ -1,5 +1,6 @@
-import { Counter } from './components/counter/counter';
-import { Logo } from './components/logo/logo';
+import { Counter } from "./components/counter/counter";
+import { DraggableListUser } from "./components/draggable-list/draggable-list";
+import { Logo } from "./components/logo/logo";
 
 export default () => {
   return (
@@ -11,6 +12,7 @@ export default () => {
       <body>
         <Logo />
         <Counter />
+        <DraggableListUser />
       </body>
     </>
   );
